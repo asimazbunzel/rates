@@ -28,13 +28,15 @@ class Population(object):
     seed : `integer`
         Seed for pseudo-random draws.
 
-    kwargs : `dictionary`
+    Config : `dictionary`
         Dictionary with configs for the PDFs of initial binary conditions.
     """
 
     DEFAULT_BINARIESNO = 100000
 
-    def __init__(self, number: float = 0, seed: int = None, **kwargs):
+    def __init__(
+        self, number: float = 0, seed: int = None, Config: dict = None
+    ):
 
         logger.debug("generating binary population")
 
@@ -58,41 +60,62 @@ class Population(object):
         self.number = number
         self.seed = seed
         args = {
-            "PDF_m1": "Salpeter",
-            "min_m1": 1,
-            "max_m1": 150,
-            "PDF_q": "Uniform",
-            "min_q": 1e-2,
-            "max_q": 1,
-            "PDF_p": "Sana",
-            "min_p": 1.412537545e0,
-            "max_p": 316227.766e0,
+            "Primary": {
+                "pdf": "Salpeter",
+                "min_mass": 1,
+                "max_mass": 150,
+            },
+            "MassRatio": {
+                "pdf": "Uniform",
+                "min_mass_ratio": 1e-2,
+                "max_mass_ratio": 1,
+            },
+            "OrbitalPeriod": {
+                "pdf": "Sana",
+                "min_period": 1.412537545e0,
+                "max_period": 316227.766e0,
+            },
         }
 
-        for key, value in kwargs.items():
-            if key in args:
-                args[key] = value
-            else:
-                msg = f"keyword argument `{key}` not recognised and will be "
-                msg += f"ignored. Available options are: {list(args.keys())}"
-                logging.warning(msg)
+        for key, value in Config.items():
+
+            if key == "Primary":
+                for subkey, subval in Config[key].items():
+                    if subkey in Config[key]:
+                        if subval is not None:
+                            args[key][subkey] = subval
+
+            if key == "MassRatio":
+                for subkey, subval in Config[key].items():
+                    if subkey in Config[key]:
+                        if subval is not None:
+                            args[key][subkey] = subval
+
+            if key == "OrbitalPeriod":
+                for subkey, subval in Config[key].items():
+                    if subkey in Config[key]:
+                        if subval is not None:
+                            args[key][subkey] = subval
+
+        logger.debug(f"Arguments to use: `{args}`")
 
         # for reproduction of results
         if self.seed is not None:
             set_seed(self.seed)
 
-        self.generate_primaries(args)
-        self.generate_companions()
-        self.generate_periods()
+        self.primaries = self.generate_primaries(args["Primary"])
+        self.mass_ratios = self.generate_companions(args["MassRatio"])
+        self.periods = self.generate_periods(args["OrbitalPeriod"])
 
     def generate_primaries(self, args):
         """Method to generate a set of initial primary masses"""
 
-        if args["PDF_m1"] == "Salpeter":
+        min_mass = float(args["min_mass"])
+        max_mass = float(args["max_mass"])
+
+        if args["pdf"] == "Salpeter":
             slope = -2.7
-            m1 = sample_from_powerlaw(
-                slope, args["min_m1"], args["max_m1"], self.number
-            )
+            m1 = sample_from_powerlaw(slope, min_mass, max_mass, self.number)
 
         return m1
 
@@ -102,18 +125,26 @@ class Population(object):
         Companion masses are defined as m1 * q
         """
 
-        if args["PDF_q"] == "Uniform":
-            q = sample_from_uniform(args["min_q"], args["max_q"], self.number)
+        min_mass_ratio = float(args["min_mass_ratio"])
+        max_mass_ratio = float(args["max_mass_ratio"])
+
+        if args["pdf"] == "Uniform":
+            q = sample_from_uniform(
+                min_mass_ratio, max_mass_ratio, self.number
+            )
 
         return q
 
     def generate_periods(self, args):
         """Method to generate a set of initial orbital periods"""
 
-        if args["PDF_p"] == "Sana":
+        min_log_period = np.log10(float(args["min_period"]))
+        max_log_period = np.log10(float(args["max_period"]))
+
+        if args["pdf"] == "Sana":
             slope = -0.5
             logp = sample_from_powerlaw(
-                slope, args["min_p"], args["max_p"], self.number
+                slope, min_log_period, max_log_period, self.number
             )
             p = np.power(10, logp)
 
