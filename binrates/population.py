@@ -114,8 +114,10 @@ class Population(object):
         max_mass = float(args["max_mass"])
 
         if args["pdf"] == "Salpeter":
-            slope = -2.7
+            slope = -2.35
             m1 = sample_from_powerlaw(slope, min_mass, max_mass, self.number)
+        else:
+            m1 = None
 
         return m1
 
@@ -132,6 +134,8 @@ class Population(object):
             q = sample_from_uniform(
                 min_mass_ratio, max_mass_ratio, self.number
             )
+        else:
+            q = None
 
         return q
 
@@ -142,10 +146,12 @@ class Population(object):
         max_log_period = np.log10(float(args["max_period"]))
 
         if args["pdf"] == "Sana":
-            slope = -0.5
+            slope = -0.55
             logp = sample_from_powerlaw(
                 slope, min_log_period, max_log_period, self.number
             )
             p = np.power(10, logp)
+        else:
+            p = None
 
         return p
