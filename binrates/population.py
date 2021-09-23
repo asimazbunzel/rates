@@ -107,6 +107,10 @@ class Population(object):
         self.mass_ratios = self.generate_companions(args["MassRatio"])
         self.periods = self.generate_periods(args["OrbitalPeriod"])
 
+        self.population_array = np.vstack(
+            (self.primaries, self.mass_ratios, self.periods)
+        ).transpose()
+
     def generate_primaries(self, args):
         """Method to generate a set of initial primary masses"""
 
@@ -155,3 +159,95 @@ class Population(object):
             p = None
 
         return p
+
+
+class TargetRegion(object):
+    """Object containing the target region in binary parameter space of
+    initial masses and orbital periods to which rates will be computed
+
+    Parameters
+    ----------
+    load_from_file : `bool`
+        Whether to get the target region from a file.
+
+    fname : `string`
+        Filename for the target region.
+
+    make_test : `bool`
+        Flag to turn on test mode for the target region.
+
+    shape : `string`
+        Name of the shape for the test. Option is "rectangle"
+    """
+
+    DEFAULT_BINARIESNO = 100000
+
+    def __init__(
+        self,
+        load_from_file: bool = False,
+        fname: str = "",
+        make_test: bool = False,
+        shape: str = "",
+        **kwargs,
+    ):
+
+        logger.debug("generating target region")
+
+        if not load_from_file and not make_test:
+            msg = "Cannot have both `load_from_file` and `make_test` as "
+            msg += "false at the same time"
+            logger.error(msg)
+            raise ValueError(msg)
+
+        self.load_from_file = load_from_file
+        self.fname = fname
+        self.make_test = make_test
+        self.shape = shape
+
+        shape_kwargs = {
+            "xmin": 0,
+            "xmax": 1,
+            "dx": 0.2,
+            "ymin": 0,
+            "ymax": 1,
+            "dy": 0.2,
+            "zmin": 0,
+            "zmax": 1,
+            "dz": 0.2,
+        }
+
+        for key, value in kwargs.items():
+            if key in shape_kwargs:
+                shape_kwargs[key] = value
+
+        if self.make_test:
+            self.region = self.generate_region_for_test(shape_kwargs)
+        else:
+            raise ValueError("TargetRegion from file not ready to use")
+
+    def generate_region_for_test(self, args):
+        """create TargetRegion using a test figure
+
+        Parameters
+        ----------
+        args : `dictionary`
+            Dictionary with shape of figure to simulate a TargetRegion
+        """
+
+        xmin = args["xmin"]
+        xmax = args["xmax"]
+        dx = args["dx"]
+        ymin = args["ymin"]
+        ymax = args["ymax"]
+        dy = args["dy"]
+        zmin = args["zmin"]
+        zmax = args["zmax"]
+        dz = args["dz"]
+
+        x = np.linspace(xmin, xmax, int((xmax - xmin) / dx))
+        y = np.linspace(ymin, ymax, int((ymax - ymin) / dy))
+        z = np.linspace(zmin, zmax, int((zmax - zmin) / dz))
+
+        region = np.array(np.meshgrid(x, y, z)).T.reshape(-1, 3)
+
+        return region
