@@ -7,7 +7,7 @@ P.D.F.s
 
 import logging
 
-from binrates.io.logger import set_logging
+from binrates.io.logger import set_logger
 from binrates.io.utils import load_config
 from binrates.population import Population, TargetRegion
 
@@ -57,7 +57,7 @@ def eval_rates(config_fname: str = "", log_level: str = None, **kwargs):
         raise TypeError("`log_level` must be a string")
 
     # set logging configuration
-    set_logging(log_level)
+    set_logger()
 
     # load configuration file
     logger.info("loading configuration in YAML file")
